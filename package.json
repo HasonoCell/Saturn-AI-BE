@@ -1,0 +1,30 @@
+{
+  "name": "saturn-ai-be",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon --watch ./ --ext ts --exec ts-node ./src/app.ts",
+    "prepare": "husky"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.11.0",
+  "dependencies": {
+    "@prisma/client": "^6.12",
+    "express": "^5.1.0",
+    "prisma": "^6.12",
+    "saturn-ai-be": "link:"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.1.0",
+    "husky": "^9.1.7",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
