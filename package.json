@@ -13,21 +13,19 @@
   "packageManager": "pnpm@10.11.0",
   "dependencies": {
     "@prisma/client": "^6.12",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
-    "prisma": "^6.12",
-    "saturn-ai-be": "link:"
+    "prisma": "^6.12"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.1.0",
     "husky": "^9.1.7",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
-  },
-  "prisma": {
-    "seed": "ts-node ./prisma/seed.ts"
   }
 }
