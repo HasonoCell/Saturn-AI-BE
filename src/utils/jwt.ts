@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken";
-import dotenv from "dotenv";
 
 export interface JwtPayload {
   userId: string;
@@ -7,12 +6,7 @@ export interface JwtPayload {
   nickname: string;
 }
 
-dotenv.config();
-const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
-
-if (!JWT_SECRET_KEY) {
-  throw new Error("JWT_SECRET_KEY is not defined in environment variables");
-}
+const JWT_SECRET_KEY = "saturn-ai-secret-key";
 
 /**
  * 生成JWT token
