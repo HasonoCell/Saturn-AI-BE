@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --watch ./ --ext ts --exec ts-node ./src/app.ts",
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "dev": "tsc && concurrently \"tsc --watch --preserveWatchOutput\" \"node --watch dist/app.js\" --names \"TSC,NODE\" --prefix-colors \"blue,green\"",
+    "dev:simple": "tsc && node --watch dist/app.js",
+    "dev:watch": "tsc --watch",
     "prepare": "husky"
   },
   "keywords": [],
@@ -15,7 +19,6 @@
     "@prisma/client": "^6.12",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
-    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "prisma": "^6.12"
@@ -28,9 +31,8 @@
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.1.0",
+    "concurrently": "^9.2.0",
     "husky": "^9.1.7",
-    "nodemon": "^3.1.10",
-    "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   }
 }
