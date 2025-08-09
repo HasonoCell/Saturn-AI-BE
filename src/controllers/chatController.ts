@@ -4,7 +4,7 @@ import { ResponseData } from "../types/user";
 
 const open_ai = new OpenAI({
   // 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-  apiKey: "sk-d755685b76b047b2b91c0cf3dbf05059",
+  apiKey: process.env.OPENAI_API_KEY,
   baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
 });
 
@@ -23,7 +23,7 @@ export class ChatController {
       }
 
       const completion = await open_ai.chat.completions.create({
-        model: "qwen-turbo",
+        model: "qwen-flash",
         messages: messages,
       });
 
