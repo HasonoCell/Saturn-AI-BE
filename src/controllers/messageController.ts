@@ -1,42 +1,83 @@
 import type { Request, Response } from "express";
-import OpenAI from "openai";
-import { ResponseData } from "../types/user";
-
-const open_ai = new OpenAI({
-  // 如何获取API Key：https://help.aliyun.com/zh/model-studio/developer-reference/get-api-key
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-});
+import type {
+  ResponseData,
+  MessageType,
+  SendMessageParams,
+} from "../types";
+import { messageService } from "../services";
 
 export class MessageController {
   /**
-   * 发送消息
+   * 获取对话中的所有消息
    */
-  async sendMessage(req: Request, res: Response) {
+  async getAllMessagesByConversationId(req: Request, res: Response): Promise<void> {
     try {
-      const { messages } = req.body;
+      const { conversationId } = req.params;
+      const userId = req.user?.userId;
 
-      if (!messages || !Array.isArray(messages)) {
-        return res
-          .status(400)
-          .json({ error: "Invalid request: 'messages' must be an array." });
-      }
+      if (!conversationId) throw new Error("请传入对话ID");
+      if (!userId) throw new Error("用户未认证");
 
-      const completion = await open_ai.chat.completions.create({
-        model: "qwen-flash",
-        messages: messages,
-      });
+      const messages = await messageService.getAllMessagesByConversationId(
+        conversationId,
+        userId
+      );
 
-      const response: ResponseData<typeof completion> = {
-        data: completion,
+      const response: ResponseData<{ messages: MessageType[] }> = {
+        data: { messages },
+        message: "获取消息列表成功",
         code: 200,
-        message: "发送成功",
       };
 
-      res.json(response);
-    } catch (error) {
-      console.error("Error calling OpenAI API:", error);
-      res.status(500).json({ error: "Internal Server Error" });
+      res.status(200).json(response);
+    } catch (error: any) {
+      const response: ResponseData<null> = {
+        data: null,
+        message: error.message || "获取消息列表失败",
+        code: 400,
+      };
+      res.status(400).json(response);
+    }
+  }
+
+  /**
+   * 发送消息并获取AI回复
+   */
+  async sendMessage(req: Request, res: Response): Promise<void> {
+    try {
+      const { conversationId } = req.params;
+      const { content } = req.body;
+      const userId = req.user?.userId;
+
+      if (!conversationId) throw new Error("请传入对话ID");
+      if (!content || !content.trim()) throw new Error("消息内容不能为空");
+      if (!userId) throw new Error("用户未认证");
+
+      const params: SendMessageParams = {
+        content: content.trim(),
+        conversationId,
+        userId,
+      };
+
+      const result = await messageService.sendMessage(params);
+
+      const response: ResponseData<{
+        userMessage: MessageType;
+        aiMessage: MessageType;
+      }> = {
+        data: result,
+        message: "消息发送成功",
+        code: 200,
+      };
+
+      res.status(200).json(response);
+    } catch (error: any) {
+      const response: ResponseData<null> = {
+        data: null,
+        message: error.message || "消息发送失败",
+        code: 400,
+      };
+      res.status(400).json(response);
     }
   }
 }

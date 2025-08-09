@@ -6,7 +6,7 @@ export interface JwtPayload {
   nickname: string;
 }
 
-const JWT_SECRET_KEY = "saturn-ai-secret-key";
+const JWT_SECRET_KEY = process.env.JWT_SECRET as string;
 
 /**
  * 生成JWT token
