@@ -13,6 +13,13 @@ datasource db {
   url      = "file:./dev.db"
 }
 
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  FUNCTION
+}
+
 model User {
   id            String         @id @default(uuid())
   username      String         @unique
@@ -20,40 +27,30 @@ model User {
   nickname      String
   avatar        String?
   createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  updatedAt     DateTime       @default(now()) @updatedAt
   conversations Conversation[]
 }
 
 model Conversation {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   title       String
   description String?
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chats       Chat[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+  Message     Message[]
 
   @@index([userId, createdAt])
 }
 
-model Chat {
+model Message {
   id             String       @id @default(uuid())
-  topic          String
+  content        String
+  role           MessageRole
   conversationId String
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  messages       Message[]
   createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
 
   @@index([conversationId, createdAt])
-}
-
-model Message {
-  id        String   @id @default(uuid())
-  content   String
-  role      String // user/assistant/system/function
-  chatId    String
-  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
 }
