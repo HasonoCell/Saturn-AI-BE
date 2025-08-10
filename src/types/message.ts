@@ -15,11 +15,6 @@ export interface SendMessageParams {
   userId: string; // 用于权限验证
 }
 
-// 发送消息后返回的数据
-export interface SendMessageReturn {
-  aiMessage: MessageType;
-}
-
 // 创建消息的参数（内部使用）
 export interface CreateMessageParams {
   content: string;

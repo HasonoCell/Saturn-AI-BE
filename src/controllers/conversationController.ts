@@ -1,8 +1,7 @@
 import type { Request, Response } from "express";
 import type {
   ResponseData,
-  ConversationBase,
-  ConversationWithMessages,
+  ConversationType,
   CreateConversationParams,
 } from "../types";
 import { conversationService } from "../services";
@@ -12,10 +11,10 @@ export class ConversationController {
   async createConversation(req: Request, res: Response): Promise<void> {
     try {
       const { title, description } = req.body;
-      
-      // 从认证中间件获取用户信息
+
+      // 从认证中间件获取用户信息（./middlewares/auth.ts）
       const userId = req.user?.userId;
-      
+
       if (!userId) {
         throw new Error("用户未认证");
       }
@@ -30,8 +29,8 @@ export class ConversationController {
 
       const conversation = await conversationService.createConversation(params);
 
-      const response: ResponseData<{ conversation: ConversationBase }> = {
-        data: { conversation },
+      const response: ResponseData<ConversationType> = {
+        data: conversation,
         message: "创建对话成功！",
         code: 200,
       };
@@ -47,18 +46,20 @@ export class ConversationController {
     }
   }
 
-  async getAllConversationsByUserId(req: Request, res: Response): Promise<void> {
+  async getAllConversationsByUserId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
-      // 从认证中间件获取用户信息
       const userId = req.user?.userId;
 
       if (!userId) throw new Error("用户未认证");
 
-      const conversations: ConversationBase[] =
+      const conversations: ConversationType[] =
         await conversationService.getAllConversationsByUserId(userId);
 
-      const response: ResponseData<{ conversations: ConversationBase[] }> = {
-        data: { conversations },
+      const response: ResponseData<ConversationType[]> = {
+        data: conversations,
         message: "获取所有对话成功",
         code: 200,
       };
@@ -82,11 +83,11 @@ export class ConversationController {
       if (!id) throw new Error("请传入对话ID");
       if (!userId) throw new Error("用户未认证");
 
-      const conversation: ConversationWithMessages =
+      const conversation: ConversationType =
         await conversationService.getSingleConversationById(id, userId);
 
-      const response: ResponseData<{ conversation: ConversationWithMessages }> = {
-        data: { conversation },
+      const response: ResponseData<ConversationType> = {
+        data: conversation,
         message: "获取对话详情成功",
         code: 200,
       };

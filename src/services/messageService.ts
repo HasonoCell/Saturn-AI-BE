@@ -3,7 +3,6 @@ import type {
   MessageType,
   SendMessageParams,
   CreateMessageParams,
-  SendMessageReturn,
 } from "../types/message";
 import prisma from "../utils/prisma";
 
@@ -92,7 +91,6 @@ export class MessageService {
         completion.choices[0]?.message?.content || "抱歉，我没有收到回复。"
       );
     } catch (error) {
-      console.error("AI调用失败:", error);
       throw new Error("AI服务暂时不可用，请稍后重试");
     }
   }
@@ -134,7 +132,7 @@ export class MessageService {
   /**
    * 发送消息并获取AI回复
    */
-  async sendMessage(params: SendMessageParams): Promise<SendMessageReturn> {
+  async sendMessage(params: SendMessageParams): Promise<MessageType> {
     const { content, conversationId, userId } = params;
 
     if (!content) throw new Error("消息内容不能为空!");
@@ -150,7 +148,7 @@ export class MessageService {
       throw new Error("对话不存在或无权限访问!");
     }
 
-    // 1. 保存用户消息
+    // 1. 保存用户消息到数据库
     const userMessage = await this.createMessage({
       content,
       role: "user",
@@ -160,7 +158,7 @@ export class MessageService {
     // 2. 获取对话历史（用于AI上下文）
     const contextMessages = await this.getContextMessages(conversationId);
 
-    // 3. 调用AI获取回复
+    // 3. 调用AI获取回复（此时单纯返回的 Content，需要再包装成 Message 再加入数据库）
     const aiResponse = await this.callAI(contextMessages, userMessage);
 
     // 4. 保存AI消息
@@ -176,9 +174,7 @@ export class MessageService {
       data: { updatedAt: new Date() },
     });
 
-    return {
-      aiMessage,
-    };
+    return aiMessage;
   }
 }
 

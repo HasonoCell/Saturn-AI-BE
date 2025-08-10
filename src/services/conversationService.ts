@@ -1,6 +1,5 @@
 import type {
-  ConversationBase,
-  ConversationWithMessages,
+  ConversationType,
   CreateConversationParams,
 } from "../types/conversation";
 import prisma from "../utils/prisma";
@@ -8,7 +7,7 @@ import prisma from "../utils/prisma";
 export class ConversationService {
   async createConversation(
     params: CreateConversationParams
-  ): Promise<ConversationBase> {
+  ): Promise<ConversationType> {
     const { title, description, userId } = params;
 
     if (!title) throw new Error("对话标题不能为空!");
@@ -27,7 +26,7 @@ export class ConversationService {
 
   async getAllConversationsByUserId(
     userId: string
-  ): Promise<ConversationBase[]> {
+  ): Promise<ConversationType[]> {
     if (!userId) throw new Error("必须传入userId!");
 
     const conversations = await prisma.conversation.findMany({
@@ -41,7 +40,7 @@ export class ConversationService {
   async getSingleConversationById(
     id: string,
     userId: string
-  ): Promise<ConversationWithMessages> {
+  ): Promise<ConversationType> {
     if (!id) throw new Error("必须传入对话ID!");
     if (!userId) throw new Error("必须传入userId!");
 
@@ -49,11 +48,6 @@ export class ConversationService {
       where: {
         id,
         userId, // 确保用户只能访问自己的对话
-      },
-      include: {
-        messages: {
-          orderBy: { createdAt: "asc" },
-        },
       },
     });
 

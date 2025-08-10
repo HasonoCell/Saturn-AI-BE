@@ -22,8 +22,8 @@ export class MessageController {
         userId
       );
 
-      const response: ResponseData<{ messages: MessageType[] }> = {
-        data: { messages },
+      const response: ResponseData<MessageType[]> = {
+        data: messages,
         message: "获取消息列表成功",
         code: 200,
       };
@@ -58,12 +58,10 @@ export class MessageController {
         userId,
       };
 
-      const result = await messageService.sendMessage(params);
+      const aiMessage = await messageService.sendMessage(params);
 
-      const response: ResponseData<{
-        aiMessage: MessageType;
-      }> = {
-        data: result,
+      const response: ResponseData<MessageType> = {
+        data: aiMessage,
         message: "消息发送成功",
         code: 200,
       };
