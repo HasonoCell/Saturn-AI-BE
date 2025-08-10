@@ -177,7 +177,6 @@ export class MessageService {
     });
 
     return {
-      userMessage,
       aiMessage,
     };
   }

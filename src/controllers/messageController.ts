@@ -1,16 +1,15 @@
 import type { Request, Response } from "express";
-import type {
-  ResponseData,
-  MessageType,
-  SendMessageParams,
-} from "../types";
+import type { ResponseData, MessageType, SendMessageParams } from "../types";
 import { messageService } from "../services";
 
 export class MessageController {
   /**
    * 获取对话中的所有消息
    */
-  async getAllMessagesByConversationId(req: Request, res: Response): Promise<void> {
+  async getAllMessagesByConversationId(
+    req: Request,
+    res: Response
+  ): Promise<void> {
     try {
       const { conversationId } = req.params;
       const userId = req.user?.userId;
@@ -62,7 +61,6 @@ export class MessageController {
       const result = await messageService.sendMessage(params);
 
       const response: ResponseData<{
-        userMessage: MessageType;
         aiMessage: MessageType;
       }> = {
         data: result,

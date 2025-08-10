@@ -17,7 +17,6 @@ export interface SendMessageParams {
 
 // 发送消息后返回的数据
 export interface SendMessageReturn {
-  userMessage: MessageType;
   aiMessage: MessageType;
 }
 
