@@ -27,14 +27,3 @@ export const verifyToken = (token: string): JwtPayload => {
     throw new Error("Invalid token");
   }
 };
-
-/**
- * 解析token（不验证有效性）
- */
-export const decodeToken = (token: string): JwtPayload | null => {
-  try {
-    return jwt.decode(token) as JwtPayload;
-  } catch (error) {
-    return null;
-  }
-};

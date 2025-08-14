@@ -6,10 +6,7 @@ export class MessageController {
   /**
    * 获取对话中的所有消息
    */
-  async getAllMessagesByConversationId(
-    req: Request,
-    res: Response
-  ): Promise<void> {
+  async getAllMessages(req: Request, res: Response): Promise<void> {
     try {
       const { conversationId } = req.params;
       const userId = req.user?.userId;
@@ -17,7 +14,7 @@ export class MessageController {
       if (!conversationId) throw new Error("请传入对话ID");
       if (!userId) throw new Error("用户未认证");
 
-      const messages = await messageService.getAllMessagesByConversationId(
+      const messages = await messageService.getAllMessages(
         conversationId,
         userId
       );
@@ -40,9 +37,9 @@ export class MessageController {
   }
 
   /**
-   * 发送消息并获取AI回复
+   * 保存用户消息，不调用AI
    */
-  async sendMessage(req: Request, res: Response): Promise<void> {
+  async sendUserMessage(req: Request, res: Response): Promise<void> {
     try {
       const { conversationId } = req.params;
       const { content } = req.body;
@@ -53,16 +50,17 @@ export class MessageController {
       if (!userId) throw new Error("用户未认证");
 
       const params: SendMessageParams = {
-        content: content.trim(),
         conversationId,
+        content: content.trim(),
         userId,
       };
 
-      const aiMessage = await messageService.sendMessage(params);
+      // 这里就不用返回创建了的 UserMessage 给前端了，前端会负责包装 UserMessage 并加入状态管理中
+      await messageService.sendUserMessage(params);
 
-      const response: ResponseData<MessageType> = {
-        data: aiMessage,
-        message: "消息发送成功",
+      const response: ResponseData<null> = {
+        data: null,
+        message: "用户消息发送成功",
         code: 200,
       };
 
@@ -70,7 +68,77 @@ export class MessageController {
     } catch (error: any) {
       const response: ResponseData<null> = {
         data: null,
-        message: error.message || "消息发送失败",
+        message: error.message || "用户消息发送失败",
+        code: 400,
+      };
+      res.status(400).json(response);
+    }
+  }
+
+  /**
+   * 建立SSE连接，获取AI流式回复
+   */
+  async getAIStream(req: Request, res: Response): Promise<void> {
+    try {
+      const { conversationId } = req.params;
+      const userId = req.user?.userId; // 通过中间件认证后获取
+
+      if (!conversationId) throw new Error("请传入对话ID");
+      if (!userId) throw new Error("用户未认证");
+
+      const completion$ = await messageService.getAIStream(
+        conversationId,
+        userId
+      );
+
+      // 设置 SSE 连接必要响应头
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      });
+
+      const subscription = completion$.subscribe({
+        next: (content: string) => {
+          const response: ResponseData<string> = {
+            data: content,
+            message: "chunk",
+            code: 200,
+          };
+
+          // 将数据写入流中
+          res.write(`data: ${JSON.stringify(response)}\n\n`);
+        },
+        error: (error: any) => {
+          const errorResponse: ResponseData<null> = {
+            data: null,
+            message: error.message || "流式响应错误",
+            code: 500,
+          };
+
+          res.write(`data: ${JSON.stringify(errorResponse)}\n\n`);
+          res.end();
+        },
+        complete: () => {
+          const endResponse: ResponseData<null> = {
+            data: null,
+            message: "end",
+            code: 200,
+          };
+
+          res.write(`data: ${JSON.stringify(endResponse)}\n\n`);
+          res.end();
+        },
+      });
+
+      // 处理客户端断开连接
+      req.on("close", () => {
+        subscription.unsubscribe();
+      });
+    } catch (error: any) {
+      const response: ResponseData<null> = {
+        data: null,
+        message: error.message || "获取AI流式回复失败",
         code: 400,
       };
       res.status(400).json(response);

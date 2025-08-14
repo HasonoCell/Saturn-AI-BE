@@ -5,6 +5,7 @@ import type {
   CreateMessageParams,
 } from "../types/message";
 import prisma from "../utils/prisma";
+import { from, tap, filter, map, finalize, type Observable } from "rxjs";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -12,8 +13,6 @@ const openai = new OpenAI({
 });
 
 export class MessageService {
-  // ! 以下为内部使用的方法，不直接暴露给网络层
-
   /**
    * 创建消息
    */
@@ -48,7 +47,7 @@ export class MessageService {
       where: { conversationId },
       // 从晚到早排序，即获取最新的消息
       orderBy: { createdAt: "desc" },
-      take: 20, // 最多取20条
+      take: 10, // 最多取10条
     });
 
     // 简单的token估算和截断
@@ -62,7 +61,7 @@ export class MessageService {
 
       totalTokens += estimatedTokens;
       contextMessages.push({
-        role: message.role as "user" | "assistant" | "system",
+        role: message.role,
         content: message.content,
       });
     }
@@ -71,39 +70,9 @@ export class MessageService {
   }
 
   /**
-   * 调用AI获取回复
-   */
-  private async callAI(
-    contextMessages: any[],
-    userMessage: MessageType
-  ): Promise<string> {
-    try {
-      const messages = [...contextMessages, userMessage];
-
-      const completion = await openai.chat.completions.create({
-        model: "qwen-flash",
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: 2000,
-      });
-
-      return (
-        completion.choices[0]?.message?.content || "抱歉，我没有收到回复。"
-      );
-    } catch (error) {
-      throw new Error("AI服务暂时不可用，请稍后重试");
-    }
-  }
-
-  // -------------------------------------------------------------------------------------------------------
-  // -------------------------------------------------------------------------------------------------------
-
-  // ! 暴露给网络层的方法
-
-  /**
    * 获取对话中的所有消息
    */
-  async getAllMessagesByConversationId(
+  async getAllMessages(
     conversationId: string,
     userId: string
   ): Promise<MessageType[]> {
@@ -130,9 +99,9 @@ export class MessageService {
   }
 
   /**
-   * 发送消息并获取AI回复
+   * 建立SSE连接中，接收前端用户消息
    */
-  async sendMessage(params: SendMessageParams): Promise<MessageType> {
+  async sendUserMessage(params: SendMessageParams): Promise<void> {
     const { content, conversationId, userId } = params;
 
     if (!content) throw new Error("消息内容不能为空!");
@@ -148,33 +117,78 @@ export class MessageService {
       throw new Error("对话不存在或无权限访问!");
     }
 
-    // 1. 保存用户消息到数据库
-    const userMessage = await this.createMessage({
+    // 保存用户消息到数据库
+    await this.createMessage({
       content,
       role: "user",
       conversationId,
     });
+  }
 
-    // 2. 获取对话历史（用于AI上下文）
+  /**
+   * 建立SSE连接中，基于对话ID获取AI流式回复
+   */
+  async getAIStream(
+    conversationId: string,
+    userId: string
+  ): Promise<Observable<string>> {
+    if (!conversationId) throw new Error("必须传入对话ID!");
+    if (!userId) throw new Error("必须传入用户ID!");
+
+    // 验证用户是否有权限访问这个对话
+    const conversation = await prisma.conversation.findFirst({
+      where: { id: conversationId, userId },
+    });
+
+    if (!conversation) {
+      throw new Error("对话不存在或无权限访问!");
+    }
+
+    // 获取对话历史（包含最新的用户消息）
     const contextMessages = await this.getContextMessages(conversationId);
 
-    // 3. 调用AI获取回复（此时单纯返回的 Content，需要再包装成 Message 再加入数据库）
-    const aiResponse = await this.callAI(contextMessages, userMessage);
+    if (contextMessages.length === 0) {
+      throw new Error("对话中没有消息，无法获取AI回复!");
+    }
 
-    // 4. 保存AI消息
-    const aiMessage = await this.createMessage({
-      content: aiResponse,
-      role: "assistant",
-      conversationId,
+    let aiResponse = "";
+
+    const completion = await openai.chat.completions.create({
+      model: "qwen-flash",
+      messages: contextMessages as any[],
+      stream: true,
+      stream_options: {
+        // include_usage: true 的情况下，返回的最后一个 chunk 的 choices 数组长度为0，可以通过 chunk.usage 获取 token 使用情况
+        include_usage: true,
+      },
     });
 
-    // 5. 更新对话的更新时间
-    await prisma.conversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
-    });
+    const completion$ = from(completion).pipe(
+      // 过滤掉最后一个 chunk
+      filter((chunk) => chunk.choices && chunk.choices.length > 0),
+      map((chunk) => chunk.choices[0]?.delta.content || ""),
+      filter((content) => content.length > 0),
+      tap((content) => (aiResponse += content)),
+      // 等待数据流完成后保存AI消息
+      finalize(async () => {
+        if (aiResponse) {
+          // 保存AI消息到数据库
+          await this.createMessage({
+            content: aiResponse,
+            role: "assistant",
+            conversationId,
+          });
 
-    return aiMessage;
+          // 更新对话的更新时间
+          await prisma.conversation.update({
+            where: { id: conversationId },
+            data: { updatedAt: new Date() },
+          });
+        }
+      })
+    );
+
+    return completion$;
   }
 }
 
