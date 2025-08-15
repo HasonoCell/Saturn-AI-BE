@@ -21,3 +21,9 @@ export interface CreateMessageParams {
   role: MessageRole;
   conversationId: string;
 }
+
+export interface FirstMessageReturn {
+  conversationId: string;
+  title: string;
+  aiResponse: string;
+}

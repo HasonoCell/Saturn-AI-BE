@@ -2,36 +2,41 @@ import type { Request, Response } from "express";
 import type {
   ResponseData,
   ConversationType,
-  CreateConversationParams,
+  AutoCreateConversationParams,
 } from "../types";
 import { conversationService } from "../services";
-import { validateConversationParams } from "../utils/validate";
 
 export class ConversationController {
-  async createConversation(req: Request, res: Response): Promise<void> {
+  /**
+   * 自动创建对话
+   */
+  async autoCreateConversation(req: Request, res: Response): Promise<void> {
     try {
-      const { title, description } = req.body;
+      const { firstMessage } = req.body;
 
-      // 从认证中间件获取用户信息（./middlewares/auth.ts）
+      // 从认证中间件获取用户信息
       const userId = req.user?.userId;
 
       if (!userId) {
         throw new Error("用户未认证");
       }
 
-      const params: CreateConversationParams = {
-        title,
-        description,
+      if (!firstMessage || !firstMessage.trim()) {
+        throw new Error("第一条消息不能为空");
+      }
+
+      const params: AutoCreateConversationParams = {
+        firstMessage: firstMessage.trim(),
         userId,
       };
 
-      validateConversationParams(params);
-
-      const conversation = await conversationService.createConversation(params);
+      const conversation = await conversationService.autoCreateConversation(
+        params
+      );
 
       const response: ResponseData<ConversationType> = {
         data: conversation,
-        message: "创建对话成功！",
+        message: "自动创建对话成功！",
         code: 200,
       };
 
@@ -39,13 +44,16 @@ export class ConversationController {
     } catch (error: any) {
       const response: ResponseData<null> = {
         data: null,
-        message: error.message || "创建对话失败",
+        message: error.message || "自动创建对话失败",
         code: 400,
       };
       res.status(400).json(response);
     }
   }
 
+  /**
+   * 获取所有对话
+   */
   async getAllConversationsByUserId(
     req: Request,
     res: Response
@@ -75,6 +83,9 @@ export class ConversationController {
     }
   }
 
+  /**
+   * 获取单个对话
+   */
   async getSingleConversationById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params; // 本次对话的ID从路径参数获取
@@ -103,6 +114,9 @@ export class ConversationController {
     }
   }
 
+  /**
+   * 删除对话
+   */
   async deleteConversation(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params; // 本次对话的ID从路径参数获取

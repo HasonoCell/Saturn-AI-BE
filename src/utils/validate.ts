@@ -1,7 +1,6 @@
 import {
   LoginParams,
   RegisterParams,
-  CreateConversationParams,
 } from "../types";
 
 /**
@@ -52,20 +51,5 @@ export const validateRegisterParams = (params: RegisterParams): void => {
   const usernameRegex = /^[a-zA-Z0-9_]+$/;
   if (!usernameRegex.test(params.username)) {
     throw new Error("用户名只能包含字母、数字和下划线");
-  }
-};
-
-/**
- * 验证创建对话参数
- */
-export const validateConversationParams = (
-  params: CreateConversationParams
-): void => {
-  if (!params.userId) {
-    throw new Error("请传入用户ID");
-  }
-
-  if (!params.title || params.title.trim().length === 0) {
-    throw new Error("请传入对话标题");
   }
 };

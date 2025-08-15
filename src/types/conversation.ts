@@ -1,6 +1,5 @@
-export interface CreateConversationParams {
-  title: string;
-  description?: string;
+export interface AutoCreateConversationParams {
+  firstMessage: string;
   userId: string;
 }
 
