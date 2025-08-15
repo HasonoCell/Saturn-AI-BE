@@ -6,7 +6,7 @@ export interface JwtPayload {
   nickname: string;
 }
 
-const JWT_SECRET_KEY = "saturn-ai-secret-key";
+const JWT_SECRET_KEY = process.env.JWT_SECRET as string;
 
 /**
  * 生成JWT token
@@ -25,16 +25,5 @@ export const verifyToken = (token: string): JwtPayload => {
     return jwt.verify(token, JWT_SECRET_KEY) as JwtPayload;
   } catch (error) {
     throw new Error("Invalid token");
-  }
-};
-
-/**
- * 解析token（不验证有效性）
- */
-export const decodeToken = (token: string): JwtPayload | null => {
-  try {
-    return jwt.decode(token) as JwtPayload;
-  } catch (error) {
-    return null;
   }
 };

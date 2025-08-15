@@ -1,11 +1,3 @@
-export interface User {
-  id: string;
-  username: string;
-  password: string;
-  nickname: string;
-  avatar?: string;
-  createdAt: Date;
-}
 
 export interface UserAuth {
   nickname: string;
