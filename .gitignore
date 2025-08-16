@@ -1,5 +1,6 @@
 node_modules
 prisma/dev.db
+uploads
 # Keep environment variables out of version control
 .env
 
