@@ -73,45 +73,6 @@ export class FileController {
       res.status(500).json({ data: null, message: error.message, code: 500 });
     }
   }
-
-  // 获取上传进度
-  async getUploadProgress(req: Request, res: Response): Promise<void> {
-    try {
-      const { uploadId } = req.params;
-      if (!uploadId) {
-        res.status(400).json({ data: null, message: "缺少上传ID", code: 400 });
-        return;
-      }
-
-      const progress = fileService.getUploadProgress(uploadId);
-      if (!progress) {
-        res
-          .status(404)
-          .json({ data: null, message: "上传会话不存在", code: 404 });
-        return;
-      }
-
-      res.json({ data: progress, message: "获取进度成功", code: 200 });
-    } catch (error: any) {
-      res.status(500).json({ data: null, message: error.message, code: 500 });
-    }
-  }
-
-  // 取消上传
-  async cancelUpload(req: Request, res: Response): Promise<void> {
-    try {
-      const { uploadId } = req.params;
-      if (!uploadId) {
-        res.status(400).json({ data: null, message: "缺少上传ID", code: 400 });
-        return;
-      }
-
-      fileService.cancelUpload(uploadId);
-      res.json({ data: null, message: "取消上传成功", code: 200 });
-    } catch (error: any) {
-      res.status(500).json({ data: null, message: error.message, code: 500 });
-    }
-  }
 }
 
 export const fileController = new FileController();

@@ -23,9 +23,6 @@ export interface MergeChunksParams {
 
 export interface MergeChunksResponse {
   success: boolean;
-  fileId?: string;
-  filePath?: string;
-  fileUrl?: string;
 }
 
 export interface UploadEvent {
@@ -37,5 +34,4 @@ export interface UploadEvent {
   uploadedChunks: number[];
   status: "uploading" | "completed" | "failed";
   tempDir: string;
-  createdAt: Date;
 }

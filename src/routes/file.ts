@@ -18,11 +18,9 @@ router.use(authenticateToken);
 router.post("/init-upload", fileController.initUpload);
 router.post(
   "/upload-chunk",
-  upload.single("chunk"), // 'chunk' 是前端FormData中的字段名
+  upload.single("chunk"),
   fileController.uploadChunk
 );
 router.post("/merge-chunks", fileController.mergeChunks);
-router.get("/progress/:uploadId", fileController.getUploadProgress); // 新增进度查询
-router.delete("/cancel/:uploadId", fileController.cancelUpload);
 
 export default router;

@@ -11,7 +11,7 @@ import {
 } from "../types/file";
 
 export class FileService {
-  private uploadEvents = new Map<string, UploadEvent>();
+  private uploadEventsMap = new Map<string, UploadEvent>();
   private readonly tempDir = path.join(process.cwd(), "uploads/temp");
   private readonly imagesDir = path.join(process.cwd(), "uploads/images");
 
@@ -27,7 +27,7 @@ export class FileService {
     const existingUpload = this.findExistingUpload(params.md5Hash);
 
     if (existingUpload) {
-      // 恢复现有上传会话
+      // 恢复现有上传事件
       const uploadedChunks = this.scanUploadedChunks(
         existingUpload.tempDir,
         existingUpload.totalChunks
@@ -41,31 +41,30 @@ export class FileService {
       };
     }
 
-    // 创建新的上传会话
+    // 创建新的上传事件
     const uploadId = uuidv4();
     const uploadTempDir = path.join(this.tempDir, uploadId);
     fs.mkdirSync(uploadTempDir, { recursive: true });
 
-    this.uploadEvents.set(uploadId, {
+    this.uploadEventsMap.set(uploadId, {
       ...params,
       uploadId,
       uploadedChunks: [],
       status: "uploading",
       tempDir: uploadTempDir,
-      createdAt: new Date(),
     });
 
     return { uploadId, tempDir: uploadTempDir, uploadedChunks: [] };
   }
 
-  // 查找现有上传会话
-  private findExistingUpload(md5Hash: string): UploadEvent | undefined {
-    for (const upload of this.uploadEvents.values()) {
+  // 查找现有上传事件
+  private findExistingUpload(md5Hash: string): UploadEvent | null {
+    for (const upload of this.uploadEventsMap.values()) {
       if (upload.md5Hash === md5Hash && upload.status === "uploading") {
         return upload;
       }
     }
-    return undefined;
+    return null;
   }
 
   // 扫描已上传的切片
@@ -88,18 +87,10 @@ export class FileService {
     chunkIndex: number,
     chunkBuffer: Buffer
   ): Promise<void> {
-    const uploadEvent = this.uploadEvents.get(uploadId);
-    if (!uploadEvent) throw new Error("上传会话不存在");
+    const uploadEvent = this.uploadEventsMap.get(uploadId);
+    if (!uploadEvent) throw new Error("上传事件不存在");
 
     const chunkPath = path.join(uploadEvent.tempDir, `chunk_${chunkIndex}`);
-
-    // 如果切片已存在，跳过保存
-    if (fs.existsSync(chunkPath)) {
-      if (!uploadEvent.uploadedChunks.includes(chunkIndex)) {
-        uploadEvent.uploadedChunks.push(chunkIndex);
-      }
-      return;
-    }
 
     fs.writeFileSync(chunkPath, chunkBuffer);
 
@@ -108,24 +99,10 @@ export class FileService {
     }
   }
 
-  // 获取上传进度
-  getUploadProgress(
-    uploadId: string
-  ): { uploaded: number; total: number; percent: number } | null {
-    const uploadEvent = this.uploadEvents.get(uploadId);
-    if (!uploadEvent) return null;
-
-    const uploaded = uploadEvent.uploadedChunks.length;
-    const total = uploadEvent.totalChunks;
-    const percent = Math.round((uploaded / total) * 100);
-
-    return { uploaded, total, percent };
-  }
-
   // 合并切片
   async mergeChunks(params: MergeChunksParams): Promise<MergeChunksResponse> {
-    const uploadEvent = this.uploadEvents.get(params.uploadId);
-    if (!uploadEvent) throw new Error("上传会话不存在");
+    const uploadEvent = this.uploadEventsMap.get(params.uploadId);
+    if (!uploadEvent) throw new Error("上传事件不存在");
 
     // 检查切片完整性
     if (uploadEvent.uploadedChunks.length !== uploadEvent.totalChunks) {
@@ -161,25 +138,17 @@ export class FileService {
 
     return {
       success: true,
-      fileId: params.uploadId,
-      filePath: finalPath,
-      fileUrl: `/uploads/images/${fileName}`,
     };
-  }
-
-  // 取消上传
-  cancelUpload(uploadId: string): void {
-    this.cleanup(uploadId);
   }
 
   // 清理资源
   private cleanup(uploadId: string): void {
-    const event = this.uploadEvents.get(uploadId);
+    const event = this.uploadEventsMap.get(uploadId);
     if (event) {
       try {
         fs.rmSync(event.tempDir, { recursive: true, force: true });
       } catch {}
-      this.uploadEvents.delete(uploadId);
+      this.uploadEventsMap.delete(uploadId);
     }
   }
 
