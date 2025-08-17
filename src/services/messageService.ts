@@ -2,6 +2,8 @@ import type {
   MessageType,
   SendMessageParams,
   CreateMessageParams,
+  SearchMessageItem,
+  SearchMessagesParams,
 } from "../types/message";
 import prisma from "../utils/prisma";
 import { from, tap, filter, map, finalize, type Observable } from "rxjs";
@@ -149,7 +151,7 @@ export class MessageService {
     let aiResponse = "";
 
     const completion = await openai.chat.completions.create({
-      model: "qwen-flash",
+      model: "qwen-plus",
       messages: contextMessages as any[],
       stream: true,
       stream_options: {
@@ -184,6 +186,62 @@ export class MessageService {
     );
 
     return completion$;
+  }
+
+  /**
+   * 搜索用户的消息
+   */
+  async searchMessages(
+    params: SearchMessagesParams
+  ): Promise<SearchMessageItem[]> {
+    const { query, userId } = params;
+
+    if (!query || !query.trim()) {
+      throw new Error("搜索关键词不能为空!");
+    }
+    if (!userId) {
+      throw new Error("必须传入用户ID!");
+    }
+
+    // 在用户的所有对话中搜索包含关键词的消息
+    const messages = await prisma.message.findMany({
+      where: {
+        // 确保只搜索用户自己的消息
+        conversation: {
+          userId,
+        },
+        // 内容包含搜索关键词
+        content: {
+          contains: query.trim(),
+        },
+      },
+      include: {
+        conversation: {
+          select: {
+            id: true,
+            title: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+      // 按时间倒序排列，最新的消息在前
+      orderBy: {
+        createdAt: "desc",
+      },
+      // 限制返回数量，避免一次返回过多数据
+      take: 50,
+    });
+
+    // 转换为前端需要的格式
+    return messages.map((message) => ({
+      id: message.id,
+      content: message.content,
+      role: message.role,
+      conversationId: message.conversationId,
+      createdAt: message.createdAt,
+      conversationTitle: message.conversation.title,
+    }));
   }
 }
 

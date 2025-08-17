@@ -14,20 +14,40 @@ export class ConversationService {
   ): Promise<string> {
     try {
       const completion = await openai.chat.completions.create({
-        model: "qwen-flash",
+        model: "qwen-plus",
         messages: [
           {
             role: "system",
-            content:
-              "你是一个专门为对话生成简洁标题的助手。请根据用户的第一条消息，生成一个简洁、准确、有意义的对话标题。标题必须在8-20个字之间，能够概括对话的主要内容。标题不应该使用任何标点符号，应该使用陈述语气。只返回标题，不要其他内容。",
+            content: [
+              "你是一个专业的对话标题生成助手。",
+              "请根据用户的消息内容，生成一个简洁、准确、有意义的对话标题。",
+              "",
+              "要求：",
+              "1. 标题长度：必须有8-15个汉字",
+              "2. 提取核心主题和关键信息",
+              "3. 使用简洁的陈述语气，避免疑问句",
+              "4. 不使用标点符号和特殊字符",
+              "5. 优先使用具体的名词和动词",
+              "6. 避免使用'关于'、'请问'、'如何'等冗余词汇",
+              "",
+              "示例：",
+              "- 输入：'我想学习React开发，有什么好的资料推荐吗？'",
+              "  输出：'React开发学习资料推荐'",
+              "- 输入：'帮我写一个Python爬虫程序'",
+              "  输出：'Python爬虫程序开发'",
+              "- 输入：'今天天气怎么样？'",
+              "  输出：'天气查询'",
+              "",
+              "只返回标题文本，不要任何解释。",
+            ].join("\n"),
           },
           {
             role: "user",
-            content: `请为以下消息生成一个对话标题：\n\n${firstMessage}`,
+            content: firstMessage,
           },
         ],
-        temperature: 0.7,
-        max_tokens: 20,
+        temperature: 0.3,
+        max_tokens: 30,
       });
 
       const generatedTitle = completion.choices[0]?.message?.content?.trim();

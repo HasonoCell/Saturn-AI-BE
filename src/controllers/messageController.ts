@@ -4,6 +4,7 @@ import type {
   MessageType,
   SendMessageParams,
   FirstMessageReturn,
+  SearchMessageItem,
 } from "../types";
 import { messageService } from "../services";
 import { conversationService } from "../services";
@@ -193,6 +194,42 @@ export class MessageController {
       const response: ResponseData<null> = {
         data: null,
         message: error.message || "获取AI流式回复失败",
+        code: 400,
+      };
+      res.status(400).json(response);
+    }
+  }
+
+  /**
+   * 搜索消息
+   */
+  async searchMessages(req: Request, res: Response): Promise<void> {
+    try {
+      const { query } = req.query;
+      const userId = req.user?.userId;
+
+      if (!query || !query.toString().trim()) {
+        throw new Error("搜索关键词不能为空");
+      }
+
+      if (!userId) throw new Error("用户未认证");
+
+      const searchResults = await messageService.searchMessages({
+        query: query.toString().trim(),
+        userId,
+      });
+
+      const response: ResponseData<SearchMessageItem[]> = {
+        data: searchResults,
+        message: "搜索消息成功",
+        code: 200,
+      };
+
+      res.status(200).json(response);
+    } catch (error: any) {
+      const response: ResponseData<null> = {
+        data: null,
+        message: error.message || "搜索消息失败",
         code: 400,
       };
       res.status(400).json(response);

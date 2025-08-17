@@ -26,3 +26,14 @@ export interface FirstMessageReturn {
   conversationId: string;
   title: string;
 }
+
+// 搜索消息的结果项
+export interface SearchMessageItem extends MessageType {
+  conversationTitle: string;
+}
+
+// 搜索消息的请求参数
+export interface SearchMessagesParams {
+  query: string;
+  userId: string;
+}
