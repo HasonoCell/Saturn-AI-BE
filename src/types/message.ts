@@ -25,5 +25,4 @@ export interface CreateMessageParams {
 export interface FirstMessageReturn {
   conversationId: string;
   title: string;
-  aiResponse: string;
 }

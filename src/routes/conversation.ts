@@ -8,7 +8,6 @@ const router = Router();
 router.use(authenticateToken);
 
 router.get("/", conversationController.getAllConversationsByUserId);
-router.post("/auto", conversationController.autoCreateConversation);
 router.get("/:id", conversationController.getSingleConversationById);
 router.delete("/:id", conversationController.deleteConversation);
 

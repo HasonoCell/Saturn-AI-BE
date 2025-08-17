@@ -43,7 +43,7 @@ export class MessageController {
   }
 
   /**
-   * 保存用户消息，不调用AI
+   * 保存用户消息到数据库
    */
   async sendUserMessage(req: Request, res: Response): Promise<void> {
     try {
@@ -82,12 +82,60 @@ export class MessageController {
   }
 
   /**
+   * 自动创建对话并发送第一条消息
+   */
+  async autoCreateAndSendFirstMessage(
+    req: Request,
+    res: Response
+  ): Promise<void> {
+    try {
+      const { content } = req.body;
+      const userId = req.user?.userId;
+
+      if (!content || !content) throw new Error("消息内容不能为空");
+      if (!userId) throw new Error("用户未认证");
+
+      // 1. 自动创建对话
+      const conversation = await conversationService.autoCreateConversation({
+        firstMessage: content,
+        userId,
+      });
+
+      // 2. 保存用户消息
+      await messageService.sendUserMessage({
+        conversationId: conversation.id,
+        content: content,
+        userId,
+      });
+
+      // 3. 返回对话信息
+      const response: ResponseData<FirstMessageReturn> = {
+        data: {
+          conversationId: conversation.id,
+          title: conversation.title,
+        },
+        message: "自动创建对话并获取AI回复成功",
+        code: 200,
+      };
+
+      res.status(200).json(response);
+    } catch (error: any) {
+      const response: ResponseData<null> = {
+        data: null,
+        message: error.message || "自动创建对话并发送消息失败",
+        code: 400,
+      };
+      res.status(400).json(response);
+    }
+  }
+
+  /**
    * 建立SSE连接，获取AI流式回复
    */
   async getAIStream(req: Request, res: Response): Promise<void> {
     try {
       const { conversationId } = req.params;
-      const userId = req.user?.userId; // 通过中间件认证后获取
+      const userId = req.user?.userId;
 
       if (!conversationId) throw new Error("请传入对话ID");
       if (!userId) throw new Error("用户未认证");
@@ -145,62 +193,6 @@ export class MessageController {
       const response: ResponseData<null> = {
         data: null,
         message: error.message || "获取AI流式回复失败",
-        code: 400,
-      };
-      res.status(400).json(response);
-    }
-  }
-
-  /**
-   * 自动创建对话并发送第一条消息（组合API）
-   * 返回对话信息和AI完整回复，前端可以直接显示
-   */
-  async autoCreateAndSendFirstMessage(
-    req: Request,
-    res: Response
-  ): Promise<void> {
-    try {
-      const { content } = req.body;
-      const userId = req.user?.userId;
-
-      if (!content || !content.trim()) throw new Error("消息内容不能为空");
-      if (!userId) throw new Error("用户未认证");
-
-      // 1. 自动创建对话
-      const conversation = await conversationService.autoCreateConversation({
-        firstMessage: content.trim(),
-        userId,
-      });
-
-      // 2. 发送用户消息
-      await messageService.sendUserMessage({
-        conversationId: conversation.id,
-        content: content.trim(),
-        userId,
-      });
-
-      // 3. 获取AI回复（非流式，完整回复）
-      const aiResponse = await messageService.getAICompleteResponse(
-        conversation.id,
-        userId
-      );
-
-      // 4. 返回对话信息和AI回复
-      const response: ResponseData<FirstMessageReturn> = {
-        data: {
-          conversationId: conversation.id,
-          title: conversation.title,
-          aiResponse,
-        },
-        message: "自动创建对话并获取AI回复成功",
-        code: 200,
-      };
-
-      res.status(200).json(response);
-    } catch (error: any) {
-      const response: ResponseData<null> = {
-        data: null,
-        message: error.message || "自动创建对话并发送消息失败",
         code: 400,
       };
       res.status(400).json(response);

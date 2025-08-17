@@ -185,62 +185,6 @@ export class MessageService {
 
     return completion$;
   }
-
-  /**
-   * 获取AI完整回复（非流式）
-   * 用于组合API中一次性获取完整回复
-   */
-  async getAICompleteResponse(
-    conversationId: string,
-    userId: string
-  ): Promise<string> {
-    if (!conversationId) throw new Error("必须传入对话ID!");
-    if (!userId) throw new Error("必须传入用户ID!");
-
-    // 验证用户是否有权限访问这个对话
-    const conversation = await prisma.conversation.findFirst({
-      where: { id: conversationId, userId },
-    });
-
-    if (!conversation) {
-      throw new Error("对话不存在或无权限访问!");
-    }
-
-    // 获取对话历史（包含最新的用户消息）
-    const contextMessages = await this.getContextMessages(conversationId);
-
-    if (contextMessages.length === 0) {
-      throw new Error("对话中没有消息，无法获取AI回复!");
-    }
-
-    const completion = await openai.chat.completions.create({
-      model: "qwen-flash",
-      messages: contextMessages as any[],
-      stream: false, // 非流式
-      temperature: 0.7,
-    });
-
-    const aiResponse = completion.choices[0]?.message?.content?.trim() || "";
-
-    if (!aiResponse) {
-      throw new Error("AI回复为空");
-    }
-
-    // 保存AI消息到数据库
-    await this.createMessage({
-      content: aiResponse,
-      role: "assistant",
-      conversationId,
-    });
-
-    // 更新对话的更新时间
-    await prisma.conversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
-    });
-
-    return aiResponse;
-  }
 }
 
 export const messageService = new MessageService();
