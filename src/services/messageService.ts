@@ -16,7 +16,7 @@ export class MessageService {
   private async createMessage(
     params: CreateMessageParams
   ): Promise<MessageType> {
-    const { content, role, conversationId } = params;
+    const { content, role, conversationId, model, network } = params;
 
     if (!content) throw new Error("消息内容不能为空!");
     if (!role) throw new Error("必须指定消息角色!");
@@ -27,6 +27,8 @@ export class MessageService {
         content,
         role,
         conversationId,
+        model,
+        network,
       },
     });
 
@@ -99,7 +101,9 @@ export class MessageService {
    * 建立SSE连接中，接收前端用户消息
    */
   async sendUserMessage(params: SendMessageParams): Promise<void> {
-    const { content, conversationId, userId } = params;
+    const { content, conversationId, userId, model, network } = params;
+
+    console.log(params);
 
     if (!content) throw new Error("消息内容不能为空!");
     if (!conversationId) throw new Error("必须传入对话ID!");
@@ -119,6 +123,8 @@ export class MessageService {
       content,
       role: "user",
       conversationId,
+      model,
+      network,
     });
   }
 
@@ -148,22 +154,35 @@ export class MessageService {
       throw new Error("对话中没有消息，无法获取AI回复!");
     }
 
+    // 获取最新的用户消息来确定使用的模型和网络设置
+    const latestUserMessage = await prisma.message.findFirst({
+      where: {
+        conversationId,
+        role: "user",
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const model = latestUserMessage?.model!;
+    const network = latestUserMessage?.network!;
+
     let aiResponse = "";
 
     const completion = await openai.chat.completions.create({
-      model: "qwen-plus",
+      model: model,
       messages: contextMessages as any[],
       stream: true,
       stream_options: {
         // include_usage: true 的情况下，返回的最后一个 chunk 的 choices 数组长度为0，可以通过 chunk.usage 获取 token 使用情况
         include_usage: true,
       },
-    });
+      enable_search: network,
+    } as any);
 
-    const completion$ = from(completion).pipe(
+    const completion$ = from(completion as any).pipe(
       // 过滤掉最后一个 chunk
-      filter((chunk) => chunk.choices && chunk.choices.length > 0),
-      map((chunk) => chunk.choices[0]?.delta.content || ""),
+      filter((chunk: any) => chunk.choices && chunk.choices.length > 0),
+      map((chunk: any) => chunk.choices[0]?.delta.content || ""),
       filter((content) => content.length > 0),
       tap((content) => (aiResponse += content)),
       // 等待数据流完成后保存AI消息
@@ -174,6 +193,8 @@ export class MessageService {
             content: aiResponse,
             role: "assistant",
             conversationId,
+            model,
+            network,
           });
 
           // 更新对话的更新时间
@@ -239,6 +260,8 @@ export class MessageService {
       content: message.content,
       role: message.role,
       conversationId: message.conversationId,
+      model: message.model,
+      network: message.network,
       createdAt: message.createdAt,
       conversationTitle: message.conversation.title,
     }));

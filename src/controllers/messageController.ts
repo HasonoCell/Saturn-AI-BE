@@ -49,7 +49,8 @@ export class MessageController {
   async sendUserMessage(req: Request, res: Response): Promise<void> {
     try {
       const { conversationId } = req.params;
-      const { content } = req.body;
+      const { content, model, network } = req.body;
+
       const userId = req.user?.userId;
 
       if (!conversationId) throw new Error("请传入对话ID");
@@ -60,6 +61,8 @@ export class MessageController {
         conversationId,
         content: content.trim(),
         userId,
+        model,
+        network,
       };
 
       // 这里就不用返回创建了的 UserMessage 给前端了，前端会负责包装 UserMessage 并加入状态管理中
@@ -90,7 +93,7 @@ export class MessageController {
     res: Response
   ): Promise<void> {
     try {
-      const { content } = req.body;
+      const { content, model, network } = req.body;
       const userId = req.user?.userId;
 
       if (!content || !content) throw new Error("消息内容不能为空");
@@ -105,8 +108,10 @@ export class MessageController {
       // 2. 保存用户消息
       await messageService.sendUserMessage({
         conversationId: conversation.id,
-        content: content,
+        content,
         userId,
+        model,
+        network
       });
 
       // 3. 返回对话信息

@@ -5,6 +5,8 @@ export interface MessageType {
   content: string;
   role: MessageRole;
   conversationId: string;
+  model: string;
+  network: boolean;
   createdAt: Date;
 }
 
@@ -12,7 +14,9 @@ export interface MessageType {
 export interface SendMessageParams {
   content: string;
   conversationId: string;
-  userId: string; // 用于权限验证
+  userId: string;
+  model: string,
+  network: boolean
 }
 
 // 创建消息的参数（内部使用）
@@ -20,6 +24,8 @@ export interface CreateMessageParams {
   content: string;
   role: MessageRole;
   conversationId: string;
+  model: string,
+  network: boolean
 }
 
 export interface FirstMessageReturn {
