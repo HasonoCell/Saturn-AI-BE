@@ -6,7 +6,7 @@ export interface JwtPayload {
   nickname: string;
 }
 
-const JWT_SECRET_KEY = process.env.JWT_SECRET as string;
+const JWT_SECRET_KEY = (process.env.JWT_SECRET as string) || "JWT_SECRET_KEY";
 
 /**
  * 生成JWT token
