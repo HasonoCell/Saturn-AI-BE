@@ -3,6 +3,7 @@ prisma/dev.db
 uploads
 # Keep environment variables out of version control
 .env
+.env.example
 
 # Compiled JavaScript files
 dist
